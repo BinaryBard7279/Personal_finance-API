@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from typing import Optional
 from datetime import date
 
@@ -26,7 +26,7 @@ class Transaction(BaseModel):
 
 class UserCreate(BaseModel):
     username: str = Field(min_length=3, max_length=50)
-    email: str
+    email: EmailStr
     password: str = Field(min_length=6)
 
 
@@ -42,8 +42,3 @@ class User(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
-    
-
-class UserLogin(BaseModel):
-    username: str
-    password: str

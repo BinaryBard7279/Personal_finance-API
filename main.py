@@ -27,15 +27,19 @@ async def startup():
     description="создает нового пользователя."
 )
 async def register_user(user: schemas.UserCreate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(models.User).filter(models.User.username == user.username))
-    db_user = result.scalar_one_or_none()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
-    
-    result = await db.execute(select(models.User).filter(models.User.email == user.email))
-    db_user = result.scalar_one_or_none()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+    result = await db.execute(
+        select(models.User).filter(
+            (models.User.username == user.username) | 
+            (models.User.email == user.email)
+        )
+    )
+    existing_user = result.scalar_one_or_none()
+    if existing_user:
+        if existing_user.username == user.username:
+            raise HTTPException(status_code=400, detail="Username already registered")
+        else:
+            raise HTTPException(status_code=400, detail="Email already registered")
+
     
     hashed_password = security.get_password_hash(user.password)
     new_user = models.User(
