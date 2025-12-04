@@ -1,6 +1,6 @@
+import os
 from datetime import datetime, timedelta
 from typing import Optional
-
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException
@@ -12,7 +12,7 @@ from database import get_db
 import models
 
 
-SECRET_KEY = "mysecretkey"
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

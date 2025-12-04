@@ -19,7 +19,7 @@ class Transaction(Base):
     amount = Column(Float)
     category = Column(String)
     description = Column(String)
-    date = Column(String)
+    date = Column(Date)
     type = Column(String)
     owner_id = Column(Integer, ForeignKey("users.id"))
     

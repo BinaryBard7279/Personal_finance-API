@@ -1,15 +1,26 @@
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import declarative_base
+import os
+from dotenv import load_dotenv
 
-SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///./database.db"
+load_dotenv()
 
-# асинхронность
-engine = create_async_engine(
-    SQLALCHEMY_DATABASE_URL,
-    echo=False,
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+asyncpg://postgres:password@localhost:5432/finance_db"
 )
 
-AsyncSessionLocal = sessionmaker(
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+
+# Асинхронный движок
+engine = create_async_engine(
+    DATABASE_URL,
+    echo=False,
+    future=True
+)
+
+AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
     expire_on_commit=False
