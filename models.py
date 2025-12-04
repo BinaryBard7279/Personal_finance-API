@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -8,8 +8,9 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
-    
-    transactions = relationship("Transaction", back_populates="owner")
+    is_admin = Column(Boolean, default=False)  
+
+    transactions = relationship("Transaction", back_populates="owner", cascade="all, delete-orphan")
 
 class Transaction(Base):
     __tablename__ = "transactions"
@@ -20,7 +21,6 @@ class Transaction(Base):
     description = Column(String)
     date = Column(String)
     type = Column(String)
-    
     owner_id = Column(Integer, ForeignKey("users.id"))
     
     owner = relationship("User", back_populates="transactions")

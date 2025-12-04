@@ -34,6 +34,7 @@ class User(BaseModel):
     id: int
     username: str
     email: str
+    is_admin: bool
 
     class Config:
         from_attributes = True

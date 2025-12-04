@@ -40,12 +40,15 @@ async def register_user(user: schemas.UserCreate, db: AsyncSession = Depends(get
         else:
             raise HTTPException(status_code=400, detail="Email already registered")
 
+    #РЕГА ПЕРВОГО АДМИНА !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    is_admin = (user.username == "admin")
     
     hashed_password = security.get_password_hash(user.password)
     new_user = models.User(
         username=user.username,
         email=user.email,
-        hashed_password=hashed_password
+        hashed_password=hashed_password,
+        is_admin=is_admin 
     )
     
     db.add(new_user)
@@ -185,3 +188,133 @@ async def delete_transaction(
     await db.commit()
     
     return {"message": "Transaction deleted successfully"}
+
+# АДМИН РОУТЫ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+# список всех пользователей
+@app.get(
+    "/admin/users",
+    response_model=list[schemas.User],
+    summary="просмотр всех пользователей",
+    description="список всех юзеров в системе"
+)
+async def get_all_users(
+    db: AsyncSession = Depends(get_db),
+    current_admin: models.User = Depends(security.get_current_admin_user)
+):
+    result = await db.execute(select(models.User))
+    users = result.scalars().all()
+    return users
+
+@app.delete(
+    "/admin/users/{user_id}",
+    summary="удаление юзера",
+    description="удаляет пользователя и все его транзакции по id"
+)
+async def delete_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: models.User = Depends(security.get_current_admin_user)
+):
+
+    
+    result = await db.execute(select(models.User).filter(models.User.id == user_id))
+    user = result.scalar_one_or_none()
+    
+    if user is None:
+        raise HTTPException(status_code=404, detail="юзер не найден")
+    
+    await db.delete(user)
+    await db.commit()
+    
+    return {"message": f"юзер {user.username} удален"}
+
+
+# транзации всех пользователей
+@app.get(
+    "/admin/transactions",
+    response_model=list[schemas.Transaction],
+    summary="просмотр всех транзакций",
+    description="возвращает список транзакций всех пользователей"
+)
+async def get_all_transactions(
+    db: AsyncSession = Depends(get_db),
+    current_admin: models.User = Depends(security.get_current_admin_user)
+):
+    result = await db.execute(select(models.Transaction))
+    transactions = result.scalars().all()
+    return transactions
+
+@app.delete(
+    "/admin/transactions/{transaction_id}",
+    summary="удаление транзакции",
+    description="удаляет любую транзакцию по id"
+)
+async def admin_delete_transaction(
+    transaction_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: models.User = Depends(security.get_current_admin_user)
+):
+    result = await db.execute(
+        select(models.Transaction).filter(models.Transaction.id == transaction_id)
+    )
+    transaction = result.scalar_one_or_none()
+    
+    if transaction is None:
+        raise HTTPException(status_code=404, detail="транзакция не найдена")
+    
+    await db.delete(transaction)
+    await db.commit()
+    
+    return {"message": f"транзакция {transaction_id} удалена"}
+
+@app.put(
+    "/admin/users/{user_id}/promote",
+    summary="дать права админа",
+    description="делает юзера админом"
+)
+async def promote_to_admin(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: models.User = Depends(security.get_current_admin_user)
+):
+    result = await db.execute(select(models.User).filter(models.User.id == user_id))
+    user = result.scalar_one_or_none()
+    
+    if user is None:
+        raise HTTPException(status_code=404, detail="юзер не найден")
+    
+    if user.is_admin:
+        raise HTTPException(status_code=400, detail="он уже админ")
+    
+    user.is_admin = True
+    await db.commit()
+    await db.refresh(user)
+    
+    return {"message": f"{user.username} теперь админ"}
+
+@app.put(
+    "/admin/users/{user_id}/demote",
+    summary="снять права админа",
+    description="убирает права администратора у юзера"
+)
+async def demote_from_admin(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: models.User = Depends(security.get_current_admin_user)
+):
+    
+    result = await db.execute(select(models.User).filter(models.User.id == user_id))
+    user = result.scalar_one_or_none()
+    
+    if user is None:
+        raise HTTPException(status_code=404, detail="юзер не найден")
+    
+    if not user.is_admin:
+        raise HTTPException(status_code=400, detail="он и так не админ")
+    
+    user.is_admin = False
+    await db.commit()
+    await db.refresh(user)
+    
+    return {"message": f"у {user.username} забрали админку"}

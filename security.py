@@ -59,3 +59,14 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Пользователь не найден")
         
     return user
+
+# проверка прав админа
+async def get_current_admin_user(
+    current_user: models.User = Depends(get_current_user)
+):
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=403, 
+            detail="не админ"
+        )
+    return current_user
